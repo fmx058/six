@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生肖年份数字参考 (当年生肖显示5个)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #161625 50%, #0f0f1a 100%);
+        }
+        .number-ball {
+            width: 40px; height: 40px; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; font-weight: bold;
+            color: #1a1a2e; margin: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease;
+        }
+        .number-ball:hover { transform: scale(1.1); }
+        .ball-red { background-color: #ef4444; } .ball-blue { background-color: #3b82f6; }
+        .ball-green { background-color: #22c55e; } .ball-purple { background-color: #a855f7; }
+        .ball-yellow { background-color: #eab308; } .ball-gray { background-color: #a1a1aa; }
+        @keyframes pulseGlow {
+            0%, 100% { text-shadow: 0 0 5px #cbd5e1, 0 0 10px #cbd5e1, 0 0 15px #60a5fa; }
+            50% { text-shadow: 0 0 10px #60a5fa, 0 0 20px #60a5fa, 0 0 30px #3b82f6; }
+        }
+        .title-glow { animation: pulseGlow 3s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-3xl bg-gray-800 bg-opacity-70 backdrop-blur-sm rounded-xl shadow-2xl p-6 md:p-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-4 title-glow text-slate-100">生肖年份数字参考</h1>
+        <p class="text-center text-indigo-300 mb-1 text-lg">
+            当前年份: <span id="current-year" class="font-semibold"></span> |
+            当年生肖: <span id="current-zodiac" class="font-semibold text-xl"></span>
+            (<span class="text-sm">数字 1 对应生肖</span>)
+        </p>
+         <p class="text-center text-xs text-gray-400 mb-6">
+            (号码与生肖的对应关系每年自动顺延)
+        </p>
+
+        <div id="result-display" class="mt-6 mb-8 p-4 bg-gray-700 bg-opacity-50 rounded-lg min-h-[200px] flex flex-wrap justify-center items-center">
+            <span class="text-gray-400">点击下方按钮生成号码</span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+            <button id="generate-btn" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                生成幸运号码
+            </button>
+            <button id="clear-btn" class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
+                清除号码
+            </button>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-gray-700 text-center">
+            <p class="text-xs text-gray-500">
+                **免责声明：** 本工具生成的号码仅基于特定规则推算，仅供娱乐和参考。彩票中奖完全是随机事件，请勿将此作为投资或投注建议。购彩有风险，请理性参与，切勿沉迷。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // --- 基本数据和配置 ---
+        const zodiacs = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+        const totalNumbers = 49;
+        const baseYearForCalc = 1900; // 1900年是鼠年
+        const numbersPerZodiacDefault = 4; // **默认每个生肖选几个号**
+        const numbersForCurrentYearZodiac = 5; // **当年生肖选几个号**
+        const zodiacsToSelect = 5; // 一次选几个生肖
+
+        // --- DOM 元素 ---
+        const yearDisplay = document.getElementById('current-year');
+        const zodiacDisplay = document.getElementById('current-zodiac');
+        const resultDisplay = document.getElementById('result-display');
+        const generateBtn = document.getElementById('generate-btn');
+        const clearBtn = document.getElementById('clear-btn');
+
+        // --- 核心逻辑 ---
+        const currentYear = new Date().getFullYear();
+        const currentYearZodiacIndex = (currentYear - baseYearForCalc) % 12;
+        const currentYearZodiac = zodiacs[currentYearZodiacIndex]; // 获取当年生肖字符串
+
+        yearDisplay.textContent = currentYear;
+        zodiacDisplay.textContent = currentYearZodiac;
+
+        // **根据年份计算数字与生肖的映射关系 (使用预定义分组)**
+        function getZodiacMapping(year) {
+            const yearZodiacIndex = (year - baseYearForCalc) % 12;
+            const baseMapping = {
+                '鼠': [1, 13, 25, 37, 49], '牛': [12, 24, 36, 48], '虎': [11, 23, 35, 47],
+                '兔': [10, 22, 34, 46], '龙': [9, 21, 33, 45], '蛇': [8, 20, 32, 44],
+                '马': [7, 19, 31, 43], '羊': [6, 18, 30, 42], '猴': [5, 17, 29, 41],
+                '鸡': [4, 16, 28, 40], '狗': [3, 15, 27, 39], '猪': [2, 14, 26, 38]
+            };
+            const currentYearMap = {};
+            zodiacs.forEach((baseZodiac, baseIndex) => {
+                const currentZodiacIndex = (yearZodiacIndex + baseIndex) % 12;
+                const currentZodiacName = zodiacs[currentZodiacIndex];
+                currentYearMap[currentZodiacName] = baseMapping[baseZodiac];
+            });
+            if (year === 2025) { console.log("Calculated mapping for 2025 (Snake starts):", currentYearMap); }
+            return currentYearMap;
+        }
+
+        // 获取当年的映射
+        const currentYearMapping = getZodiacMapping(currentYear);
+
+        // 从数组中随机抽取N个不重复的元素
+        function getRandomElements(arr, n) {
+            if (!arr || arr.length === 0) return [];
+            const shuffled = arr.slice();
+            let i = arr.length;
+            let temp, index;
+            while (i--) {
+                index = Math.floor((i + 1) * Math.random());
+                temp = shuffled[index];
+                shuffled[index] = shuffled[i];
+                shuffled[i] = temp;
+            }
+            return shuffled.slice(0, Math.min(n, arr.length));
+        }
+
+        // 生成并显示号码
+        function generateNumbers() {
+            resultDisplay.innerHTML = '';
+            const selectedZodiacs = getRandomElements(zodiacs, zodiacsToSelect);
+
+            if (selectedZodiacs.length < zodiacsToSelect) {
+                 resultDisplay.textContent = '错误：无法选出足够的生肖。';
+                 return;
+            }
+
+            let totalGeneratedNumbers = [];
+            let displayHtml = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">';
+
+            selectedZodiacs.forEach(zodiac => {
+                const numbersForZodiac = currentYearMapping[zodiac];
+                // **** 判断是否为当年生肖，决定抽取数量 ****
+                const countToSelect = (zodiac === currentYearZodiac) ? numbersForCurrentYearZodiac : numbersPerZodiacDefault;
+                const selectedNumbers = getRandomElements(numbersForZodiac, countToSelect);
+                // **** 结束判断 ****
+
+                totalGeneratedNumbers = totalGeneratedNumbers.concat(selectedNumbers);
+
+                displayHtml += `<div class="bg-gray-700 bg-opacity-60 rounded-lg p-3 flex flex-col items-center shadow">
+                                  <h3 class="text-xl font-semibold text-indigo-300 mb-2">${zodiac} ${zodiac === currentYearZodiac ? '(本年)' : ''}</h3>
+                                  <div class="flex flex-wrap justify-center">`;
+                selectedNumbers.sort((a, b) => a - b);
+                selectedNumbers.forEach(num => {
+                    let colorClass = 'ball-gray';
+                    if (num % 5 === 0) colorClass = 'ball-red'; else if (num % 5 === 1) colorClass = 'ball-blue'; else if (num % 5 === 2) colorClass = 'ball-green'; else if (num % 5 === 3) colorClass = 'ball-purple'; else if (num % 5 === 4) colorClass = 'ball-yellow';
+                    displayHtml += `<div class="number-ball ${colorClass}">${num}</div>`;
+                });
+                displayHtml += `</div></div>`;
+            });
+             displayHtml += '</div>'; // Close grid
+
+             // 添加汇总显示 (总数会自动更新)
+            totalGeneratedNumbers.sort((a, b) => a - b);
+            displayHtml += `<div class="w-full mt-6 pt-4 border-t border-gray-600 text-center">
+                                <h4 class="text-lg font-medium mb-2 text-gray-300">本次推荐号码汇总 (${totalGeneratedNumbers.length}个):</h4>
+                                <div class="flex flex-wrap justify-center">`;
+            totalGeneratedNumbers.forEach(num => {
+                 let colorClass = 'ball-gray';
+                 if (num % 5 === 0) colorClass = 'ball-red'; else if (num % 5 === 1) colorClass = 'ball-blue'; else if (num % 5 === 2) colorClass = 'ball-green'; else if (num % 5 === 3) colorClass = 'ball-purple'; else if (num % 5 === 4) colorClass = 'ball-yellow';
+                 displayHtml += `<div class="number-ball ${colorClass} text-sm">${num}</div>`;
+            });
+            displayHtml += `</div></div>`;
+
+            resultDisplay.innerHTML = displayHtml;
+        }
+
+        // 清除号码
+        function clearNumbers() {
+            resultDisplay.innerHTML = '<span class="text-gray-400">点击下方按钮生成号码</span>';
+        }
+
+        // --- 事件监听 ---
+        generateBtn.addEventListener('click', generateNumbers);
+        clearBtn.addEventListener('click', clearNumbers);
+
+    </script>
+
+</body>
+</html>
